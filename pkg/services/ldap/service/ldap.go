@@ -56,6 +56,9 @@ func ProvideService(cfg *setting.Cfg, features featuremgmt.FeatureToggles, ssoSe
 		ssoSettings:  ssoSettings,
 	}
 
+	s.log.Debug("#pkg/services/ldap/service/ldap.go:ProvideService",
+		"cfg", *cfg, "features", features, "ssoSettings", ssoSettings, "GetLDAPConfig", ldap.GetLDAPConfig(cfg))
+
 	if s.features.IsEnabledGlobally(featuremgmt.FlagSsoSettingsLDAP) {
 		s.ssoSettings.RegisterReloadable(social.LDAPProviderName, s)
 
@@ -65,6 +68,7 @@ func ProvideService(cfg *setting.Cfg, features featuremgmt.FeatureToggles, ssoSe
 			return s
 		}
 
+		s.log.Debug("#pkg/services/ldap/service/ldap.go:ProvideService s.Reload(context.Background(), *ldapSettings)", "ldapSettings", ldapSettings)
 		err = s.Reload(context.Background(), *ldapSettings)
 		if err != nil {
 			s.log.Error("Failed to load LDAP settings", "error", err)
@@ -76,6 +80,8 @@ func ProvideService(cfg *setting.Cfg, features featuremgmt.FeatureToggles, ssoSe
 			return s
 		}
 
+		s.log.Debug("#pkg/services/ldap/service/ldap.go:ProvideService ldap.GetLDAPConfig(cfg)", "cfg", cfg, "s.cfg", s.cfg)
+
 		ldapCfg, err := multildap.GetConfig(s.cfg)
 		if err != nil {
 			s.log.Error("Failed to get LDAP config", "error", err)
@@ -85,10 +91,13 @@ func ProvideService(cfg *setting.Cfg, features featuremgmt.FeatureToggles, ssoSe
 		}
 	}
 
+	s.log.Debug("#pkg/services/ldap/service/ldap.go:ProvideService return", "s.cfg", s.cfg, "ldapCfg", s.ldapCfg)
+
 	return s
 }
 
 func (s *LDAPImpl) Reload(ctx context.Context, settings models.SSOSettings) error {
+	s.log.Debug("#pkg/services/ldap/service/ldap.go:LDAPImpl.Reload", "settings", settings)
 	cfg := &ldap.Config{}
 	cfg.Enabled = resolveBool(settings.Settings["enabled"], false)
 	cfg.SkipOrgRoleSync = resolveBool(settings.Settings["skip_org_role_sync"], false)
@@ -191,6 +200,7 @@ func (s *LDAPImpl) Validate(ctx context.Context, settings models.SSOSettings, ol
 }
 
 func (s *LDAPImpl) ReloadConfig() error {
+	s.log.Debug("#pkg/services/ldap/service/ldap.go:LDAPImpl.ReloadConfig")
 	if !s.cfg.Enabled {
 		return nil
 	}
@@ -198,11 +208,14 @@ func (s *LDAPImpl) ReloadConfig() error {
 	s.loadingMutex.Lock()
 	defer s.loadingMutex.Unlock()
 
+	s.log.Debug("#pkg/services/ldap/service/ldap.go:LDAPImpl.ReloadConfig ldap.GetConfig(s.cfg)", "cfg", s.cfg)
 	config, err := ldap.GetConfig(s.cfg)
 	if err != nil {
+		s.log.Error("#pkg/services/ldap/service/ldap.go:LDAPImpl.ReloadConfig ldap.GetConfig(s.cfg)", "error", err)
 		return err
 	}
 
+	s.log.Debug("#pkg/services/ldap/service/ldap.go:LDAPImpl.ReloadConfig multildap.New(config.Servers, s.cfg)", "servers", config.Servers)
 	client := multildap.New(config.Servers, s.cfg)
 	if client == nil {
 		return ErrUnableToCreateLDAPClient
@@ -210,6 +223,8 @@ func (s *LDAPImpl) ReloadConfig() error {
 
 	s.ldapCfg = config
 	s.client = client
+
+	s.log.Debug("#pkg/services/ldap/service/ldap.go:LDAPImpl.ReloadConfig return")
 
 	return nil
 }

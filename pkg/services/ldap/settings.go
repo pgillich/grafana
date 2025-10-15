@@ -114,16 +114,21 @@ func GetLDAPConfig(cfg *setting.Cfg) *Config {
 // GetConfig returns the LDAP config if LDAP is enabled otherwise it returns nil. It returns either cached value of
 // the config or it reads it and caches it first.
 func GetConfig(cfg *Config) (*ServersConfig, error) {
+	logger.Debug("#pkg/services/ldap/settings.go:GetConfig", "cfg", cfg)
 	if cfg == nil || !cfg.Enabled {
 		return nil, nil
 	}
 
+	logger.Debug("#pkg/services/ldap/settings.go:GetConfig os.Stat(cfg.ConfigFilePath)", "file", cfg.ConfigFilePath)
 	configFileStats, err := os.Stat(cfg.ConfigFilePath)
 	if err != nil {
 		return nil, err
 	}
 	configFileModified := configFileStats.ModTime()
 
+	logger.Debug("#pkg/services/ldap/settings.go:GetConfig",
+		"cachedConfig", cachedConfig.filePath, "cachedModified", cachedConfig.fileModified,
+		"cfg", cfg.ConfigFilePath, "cfgModified", configFileModified)
 	// return the config from cache if the config file hasn't been modified
 	if cachedConfig.config != nil && cachedConfig.filePath == cfg.ConfigFilePath && cachedConfig.fileModified.Equal(configFileModified) {
 		return cachedConfig.config, nil
@@ -132,6 +137,7 @@ func GetConfig(cfg *Config) (*ServersConfig, error) {
 	loadingMutex.Lock()
 	defer loadingMutex.Unlock()
 
+	logger.Debug("#pkg/services/ldap/settings.go:GetConfig readConfig(cfg.ConfigFilePath)", "file", cfg.ConfigFilePath)
 	cachedConfig.config, err = readConfig(cfg.ConfigFilePath)
 	if err == nil {
 		cachedConfig.filePath = cfg.ConfigFilePath

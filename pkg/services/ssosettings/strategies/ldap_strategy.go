@@ -5,6 +5,7 @@ import (
 	"context"
 	"encoding/json"
 
+	"github.com/grafana/grafana/pkg/infra/log"
 	"github.com/grafana/grafana/pkg/login/social"
 	"github.com/grafana/grafana/pkg/services/ldap"
 	"github.com/grafana/grafana/pkg/services/ssosettings"
@@ -16,6 +17,8 @@ type LDAPStrategy struct {
 }
 
 var _ ssosettings.FallbackStrategy = (*LDAPStrategy)(nil)
+
+var logger = log.New("ssosettings.strategies")
 
 func NewLDAPStrategy(cfg *setting.Cfg) *LDAPStrategy {
 	return &LDAPStrategy{
@@ -50,7 +53,9 @@ func (s *LDAPStrategy) GetProviderConfig(_ context.Context, _ string) (map[strin
 func (s *LDAPStrategy) getLDAPConfig() (map[string]any, error) {
 	var configMap map[string]any
 
+	logger.Debug("#pkg/services/ssosettings/strategies/ldap_strategy.go:LDAPStrategy.getLDAPConfig ldap.GetLDAPConfig(s.cfg)", "s.cfg", s.cfg)
 	config := ldap.GetLDAPConfig(s.cfg)
+	logger.Debug("#pkg/services/ssosettings/strategies/ldap_strategy.go:LDAPStrategy.getLDAPConfig ldap.GetConfig(config)", "config", config)
 	ldapConfig, err := ldap.GetConfig(config)
 	if err != nil {
 		return nil, err
